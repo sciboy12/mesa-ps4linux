@@ -51,6 +51,12 @@
 #include <threads.h>
 #else
 
+#if defined(HAVE_PTHREAD) && defined(__GLIBC__) && defined(__GLIBC_PREREQ) && __GLIBC_PREREQ(2, 42)
+#  define MESA_USE_LIBC_CALL_ONCE 1
+#else
+#  define MESA_USE_LIBC_CALL_ONCE 0
+#endif
+
 /*---------------------------- macros ---------------------------*/
 
 #ifndef _Thread_local
@@ -118,8 +124,10 @@ typedef pthread_cond_t  cnd_t;
 typedef pthread_t       thrd_t;
 typedef pthread_key_t   tss_t;
 typedef pthread_mutex_t mtx_t;
+#  if !MESA_USE_LIBC_CALL_ONCE
 typedef pthread_once_t  once_flag;
 #  define ONCE_FLAG_INIT PTHREAD_ONCE_INIT
+#  endif
 #  ifdef PTHREAD_DESTRUCTOR_ITERATIONS
 #    define TSS_DTOR_ITERATIONS PTHREAD_DESTRUCTOR_ITERATIONS
 #  else
@@ -148,7 +156,9 @@ enum
 
 /*-------------------------- functions --------------------------*/
 
+#if !MESA_USE_LIBC_CALL_ONCE
 void call_once(once_flag *, void (*)(void));
+#endif
 int cnd_broadcast(cnd_t *);
 void cnd_destroy(cnd_t *);
 int cnd_init(cnd_t *);
