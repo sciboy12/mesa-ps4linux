@@ -51,7 +51,7 @@
 #include <threads.h>
 #else
 
-#if defined(HAVE_PTHREAD) && defined(__GLIBC__) && defined(__GLIBC_PREREQ) && __GLIBC_PREREQ(2, 42)
+#if !defined(__cplusplus) && defined(HAVE_PTHREAD) && defined(__GLIBC__) && defined(__GLIBC_PREREQ) && __GLIBC_PREREQ(2, 42)
 #  define MESA_USE_LIBC_CALL_ONCE 1
 #else
 #  define MESA_USE_LIBC_CALL_ONCE 0
