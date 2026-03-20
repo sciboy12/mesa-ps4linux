@@ -42,7 +42,11 @@
 #include <llvm/IR/DiagnosticInfo.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/IR/LLVMContext.h>
+#if LLVM_VERSION_MAJOR >= 20
+#include <llvm/TargetParser/Triple.h>
+#else
 #include <llvm/ADT/Triple.h>
+#endif
 #include <llvm/IR/Type.h>
 #include <llvm/MC/TargetRegistry.h>
 #include <llvm/Target/TargetMachine.h>
