@@ -30,11 +30,23 @@
 
 #include "util/ralloc.h"
 #include "util/set.h"
+
+#ifdef UNUSED
+#pragma push_macro("UNUSED")
+#undef UNUSED
+#define MESA_RESTORE_UNUSED_MACRO
+#endif
+
 #include <llvm/ADT/ArrayRef.h>
 #include <llvm/IR/DiagnosticPrinter.h>
 #include <llvm/IR/DiagnosticInfo.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/IR/LLVMContext.h>
+#if LLVM_VERSION_MAJOR >= 20
+#include <llvm/TargetParser/Triple.h>
+#else
+#include <llvm/ADT/Triple.h>
+#endif
 #include <llvm/IR/Type.h>
 #include <llvm/MC/TargetRegistry.h>
 #include <llvm/Target/TargetMachine.h>
@@ -54,6 +66,11 @@
 #include <clang/Frontend/TextDiagnosticPrinter.h>
 #include <clang/Frontend/Utils.h>
 #include <clang/Basic/TargetInfo.h>
+
+#ifdef MESA_RESTORE_UNUSED_MACRO
+#pragma pop_macro("UNUSED")
+#undef MESA_RESTORE_UNUSED_MACRO
+#endif
 
 #include <spirv-tools/libspirv.h>
 #include <spirv-tools/libspirv.hpp>
@@ -800,12 +817,23 @@ clc_compile_to_llvm_module(LLVMContext &llvm_ctx,
       c->addDependencyCollector(dep);
    }
 
+#if LLVM_VERSION_MAJOR >= 20
+   auto diag_opts = std::make_unique<clang::DiagnosticOptions>();
+   auto *diag_opts_ptr = diag_opts.get();
+   auto *diag_printer = new clang::TextDiagnosticPrinter(diag_log_stream, *diag_opts_ptr);
+   clang::DiagnosticsEngine diag {
+      new clang::DiagnosticIDs,
+      *diag_opts_ptr,
+      diag_printer
+   };
+#else
    clang::DiagnosticsEngine diag {
       new clang::DiagnosticIDs,
       new clang::DiagnosticOptions,
       new clang::TextDiagnosticPrinter(diag_log_stream,
                                        &c->getDiagnosticOpts())
    };
+#endif
 
 #if LLVM_VERSION_MAJOR >= 17
    const char *triple = args->address_bits == 32 ? "spir-unknown-unknown" : "spirv64-unknown-unknown";
@@ -856,15 +884,15 @@ clc_compile_to_llvm_module(LLVMContext &llvm_ctx,
    c->getDiagnosticOpts().ShowCarets = false;
 
    c->createDiagnostics(
-#if LLVM_VERSION_MAJOR >= 20
-                   *llvm::vfs::getRealFileSystem(),
-#endif
                    new clang::TextDiagnosticPrinter(
                            diag_log_stream,
+#if LLVM_VERSION_MAJOR >= 20
+                           c->getDiagnosticOpts()));
+#else
                            &c->getDiagnosticOpts()));
-
+#endif
    c->setTarget(clang::TargetInfo::CreateTargetInfo(
-                   c->getDiagnostics(), c->getInvocation().TargetOpts));
+                   c->getDiagnostics(), c->getTargetOpts()));
 
    c->getFrontendOpts().ProgramAction = clang::frontend::EmitLLVMOnly;
 
@@ -908,7 +936,7 @@ clc_compile_to_llvm_module(LLVMContext &llvm_ctx,
    // or library.
    auto tmp_res_path =
 #if LLVM_VERSION_MAJOR >= 20
-      Driver::GetResourcesPath(std::string(clang_path));
+      (fs::path(LLVM_LIB_DIR) / "clang" / CLANG_RESOURCE_DIR).string();
 #else
       Driver::GetResourcesPath(std::string(clang_path), CLANG_RESOURCE_DIR);
 #endif
@@ -1127,10 +1155,11 @@ llvm_mod_to_spirv(std::unique_ptr<::llvm::Module> mod,
    if (args->use_llvm_spirv_target) {
       const char *triple = args->address_bits == 32 ? "spirv-unknown-unknown" : "spirv64-unknown-unknown";
       std::string error_msg("");
-      auto target = TargetRegistry::lookupTarget(triple, error_msg);
+      llvm::Triple triple_obj(triple);
+      auto target = TargetRegistry::lookupTarget(triple_obj, error_msg);
       if (target) {
          auto TM = target->createTargetMachine(
-            triple, "", "", {}, std::nullopt, std::nullopt,
+            triple_obj, "", "", {}, std::nullopt, std::nullopt,
 #if LLVM_VERSION_MAJOR >= 18
             ::llvm::CodeGenOptLevel::None
 #else

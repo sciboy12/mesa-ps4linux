@@ -161,7 +161,8 @@ get_dri_render_node_minor(void)
    fprintf(stderr, "Couldn't find a spare render node slot\n");
 }
 
-static void *get_function_pointer(const char *name)
+static void *
+get_function_pointer(const char *name)
 {
    void *func = dlsym(RTLD_NEXT, name);
    if (!func) {
@@ -171,7 +172,14 @@ static void *get_function_pointer(const char *name)
    return func;
 }
 
+static void *
+get_optional_function_pointer(const char *name)
+{
+   return dlsym(RTLD_NEXT, name);
+}
+
 #define GET_FUNCTION_POINTER(x) real_##x = get_function_pointer(#x)
+#define GET_OPTIONAL_FUNCTION_POINTER(x) real_##x = get_optional_function_pointer(#x)
 
 void
 drm_shim_override_file(const char *contents, const char *path_format, ...)
@@ -243,9 +251,9 @@ init_shim(void)
    GET_FUNCTION_POINTER(__fxstat64);
 #else
    GET_FUNCTION_POINTER(stat);
-   GET_FUNCTION_POINTER(stat64);
+   GET_OPTIONAL_FUNCTION_POINTER(stat64);
    GET_FUNCTION_POINTER(fstat);
-   GET_FUNCTION_POINTER(fstat64);
+   GET_OPTIONAL_FUNCTION_POINTER(fstat64);
 #endif
 
    get_dri_render_node_minor();
@@ -548,8 +556,13 @@ PUBLIC int stat64(const char* path, struct stat64* stat_buf)
    /* Note: call real stat if we're in the process of probing for a free
     * render node!
     */
-   if (render_node_minor == -1)
-      return real_stat64(path, stat_buf);
+   if (render_node_minor == -1) {
+      if (real_stat64)
+         return real_stat64(path, stat_buf);
+      _Static_assert(sizeof(struct stat64) == sizeof(struct stat),
+                     "stat64 fallback requires matching struct layout");
+      return real_stat(path, (struct stat *)stat_buf);
+   }
 
    if (hide_drm_device_path(path)) {
       errno = ENOENT;
@@ -569,8 +582,13 @@ PUBLIC int stat64(const char* path, struct stat64* stat_buf)
    }
    free(sys_dev_drm_dir);
 
-   if (strcmp(path, render_node_path) != 0)
-      return real_stat64(path, stat_buf);
+   if (strcmp(path, render_node_path) != 0) {
+      if (real_stat64)
+         return real_stat64(path, stat_buf);
+      _Static_assert(sizeof(struct stat64) == sizeof(struct stat),
+                     "stat64 fallback requires matching struct layout");
+      return real_stat(path, (struct stat *)stat_buf);
+   }
 
    memset(stat_buf, 0, sizeof(*stat_buf));
    stat_buf->st_rdev = makedev(DRM_MAJOR, render_node_minor);
@@ -601,8 +619,13 @@ PUBLIC int fstat64(int fd, struct stat64* stat_buf)
 
    struct shim_fd *shim_fd = drm_shim_fd_lookup(fd);
 
-   if (!shim_fd)
-      return real_fstat64(fd, stat_buf);
+   if (!shim_fd) {
+      if (real_fstat64)
+         return real_fstat64(fd, stat_buf);
+      _Static_assert(sizeof(struct stat64) == sizeof(struct stat),
+                     "fstat64 fallback requires matching struct layout");
+      return real_fstat(fd, (struct stat *)stat_buf);
+   }
 
    memset(stat_buf, 0, sizeof(*stat_buf));
    stat_buf->st_rdev = makedev(DRM_MAJOR, render_node_minor);
