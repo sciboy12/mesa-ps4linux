@@ -884,9 +884,6 @@ clc_compile_to_llvm_module(LLVMContext &llvm_ctx,
    c->getDiagnosticOpts().ShowCarets = false;
 
    c->createDiagnostics(
-#if LLVM_VERSION_MAJOR >= 20
-                   *llvm::vfs::getRealFileSystem(),
-#endif
                    new clang::TextDiagnosticPrinter(
                            diag_log_stream,
 #if LLVM_VERSION_MAJOR >= 20
@@ -939,7 +936,7 @@ clc_compile_to_llvm_module(LLVMContext &llvm_ctx,
    // or library.
    auto tmp_res_path =
 #if LLVM_VERSION_MAJOR >= 20
-      clang::CompilerInvocation::GetResourcesPath(clang_path, (void *)(intptr_t)clc_compile_to_llvm_module);
+      (fs::path(LLVM_LIB_DIR) / "clang" / CLANG_RESOURCE_DIR).string();
 #else
       Driver::GetResourcesPath(std::string(clang_path), CLANG_RESOURCE_DIR);
 #endif
