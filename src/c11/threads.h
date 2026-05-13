@@ -35,7 +35,6 @@
 
 #include <errno.h>
 #include <limits.h>
-#include <stdlib.h>
 
 #if defined(_WIN32) && !defined(HAVE_PTHREAD)
 #  include <io.h> /* close */
@@ -118,10 +117,8 @@ typedef pthread_cond_t  cnd_t;
 typedef pthread_t       thrd_t;
 typedef pthread_key_t   tss_t;
 typedef pthread_mutex_t mtx_t;
-#  ifndef __ONCE_FLAG_INIT
 typedef pthread_once_t  once_flag;
-#    define ONCE_FLAG_INIT PTHREAD_ONCE_INIT
-#  endif
+#  define ONCE_FLAG_INIT PTHREAD_ONCE_INIT
 #  ifdef PTHREAD_DESTRUCTOR_ITERATIONS
 #    define TSS_DTOR_ITERATIONS PTHREAD_DESTRUCTOR_ITERATIONS
 #  else
@@ -150,9 +147,7 @@ enum
 
 /*-------------------------- functions --------------------------*/
 
-#ifndef __ONCE_FLAG_INIT
 void call_once(once_flag *, void (*)(void));
-#endif
 int cnd_broadcast(cnd_t *);
 void cnd_destroy(cnd_t *);
 int cnd_init(cnd_t *);
