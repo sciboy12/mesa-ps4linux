@@ -45,6 +45,7 @@ impl_thrd_routine(void *p)
 
 
 /*--------------- 7.25.2 Initialization functions ---------------*/
+#if !defined(__GLIBC__) || !defined(__USE_ISOC23)
 // 7.25.2.1
 void
 call_once(once_flag *flag, void (*func)(void))
@@ -52,6 +53,7 @@ call_once(once_flag *flag, void (*func)(void))
     pthread_once(flag, func);
 }
 
+#endif
 
 /*------------- 7.25.3 Condition variable functions -------------*/
 // 7.25.3.1
