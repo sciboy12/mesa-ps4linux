@@ -82,6 +82,14 @@
 extern "C" {
 #endif
 
+#if defined(__GLIBC__) && defined(__GLIBC_PREREQ) && __GLIBC_PREREQ(2, 39)
+/* glibc 2.39+ exposes C23 once_flag/call_once in <stdlib.h>. Rename the
+ * C11 emulation symbols to avoid conflicting declarations in mixed headers.
+ */
+#define once_flag mesa_once_flag
+#define call_once mesa_call_once
+#endif
+
 /*---------------------------- types ----------------------------*/
 typedef void (*tss_dtor_t)(void *);
 typedef int (*thrd_start_t)(void *);
