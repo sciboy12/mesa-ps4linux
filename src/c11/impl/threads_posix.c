@@ -45,7 +45,7 @@ impl_thrd_routine(void *p)
 
 
 /*--------------- 7.25.2 Initialization functions ---------------*/
-#if !defined(__GLIBC__) || !defined(__USE_ISOC23)
+#ifndef __ONCE_FLAG_INIT
 // 7.25.2.1
 void
 call_once(once_flag *flag, void (*func)(void))

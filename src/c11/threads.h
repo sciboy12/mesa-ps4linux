@@ -118,7 +118,7 @@ typedef pthread_cond_t  cnd_t;
 typedef pthread_t       thrd_t;
 typedef pthread_key_t   tss_t;
 typedef pthread_mutex_t mtx_t;
-#  if !defined(__GLIBC__) || !defined(__USE_ISOC23)
+#  ifndef __ONCE_FLAG_INIT
 typedef pthread_once_t  once_flag;
 #    define ONCE_FLAG_INIT PTHREAD_ONCE_INIT
 #  endif
@@ -150,7 +150,7 @@ enum
 
 /*-------------------------- functions --------------------------*/
 
-#if !defined(__GLIBC__) || !defined(__USE_ISOC23)
+#ifndef __ONCE_FLAG_INIT
 void call_once(once_flag *, void (*)(void));
 #endif
 int cnd_broadcast(cnd_t *);
