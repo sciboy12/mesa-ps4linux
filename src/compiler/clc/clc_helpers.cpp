@@ -45,6 +45,10 @@
 #include <llvm-c/Target.h>
 #include <LLVMSPIRVLib/LLVMSPIRVLib.h>
 
+#ifdef UNUSED
+#undef UNUSED
+#endif
+
 #include <clang/Config/config.h>
 #include <clang/Driver/Driver.h>
 #include <clang/CodeGen/CodeGenAction.h>
@@ -800,12 +804,11 @@ clc_compile_to_llvm_module(LLVMContext &llvm_ctx,
       c->addDependencyCollector(dep);
    }
 
-   clang::DiagnosticsEngine diag {
+   auto diag_opts = std::make_shared<clang::DiagnosticOptions>();
+   clang::DiagnosticsEngine diag{
       new clang::DiagnosticIDs,
-      new clang::DiagnosticOptions,
-      new clang::TextDiagnosticPrinter(diag_log_stream,
-                                       &c->getDiagnosticOpts())
-   };
+      *diag_opts,
+      new clang::TextDiagnosticPrinter(diag_log_stream, *diag_opts)};
 
 #if LLVM_VERSION_MAJOR >= 17
    const char *triple = args->address_bits == 32 ? "spir-unknown-unknown" : "spirv64-unknown-unknown";
@@ -859,9 +862,7 @@ clc_compile_to_llvm_module(LLVMContext &llvm_ctx,
 #if LLVM_VERSION_MAJOR >= 20
                    *llvm::vfs::getRealFileSystem(),
 #endif
-                   new clang::TextDiagnosticPrinter(
-                           diag_log_stream,
-                           &c->getDiagnosticOpts()));
+                   new clang::TextDiagnosticPrinter(diag_log_stream, c->getDiagnosticOpts()));
 
    c->setTarget(clang::TargetInfo::CreateTargetInfo(
 #if LLVM_VERSION_MAJOR >= 21
@@ -912,7 +913,7 @@ clc_compile_to_llvm_module(LLVMContext &llvm_ctx,
    // or library.
    auto tmp_res_path =
 #if LLVM_VERSION_MAJOR >= 20
-      Driver::GetResourcesPath(std::string(clang_path));
+      Driver::GetResourcesPath(std::string(clang_path), CLANG_RESOURCE_DIR);
 #else
       Driver::GetResourcesPath(std::string(clang_path), CLANG_RESOURCE_DIR);
 #endif
@@ -1133,8 +1134,9 @@ llvm_mod_to_spirv(std::unique_ptr<::llvm::Module> mod,
       std::string error_msg("");
       auto target = TargetRegistry::lookupTarget(triple, error_msg);
       if (target) {
+         llvm::Triple llvm_triple(triple);
          auto TM = target->createTargetMachine(
-            triple, "", "", {}, std::nullopt, std::nullopt,
+            llvm_triple, "", "", {}, std::nullopt, std::nullopt,
 #if LLVM_VERSION_MAJOR >= 18
             ::llvm::CodeGenOptLevel::None
 #else
