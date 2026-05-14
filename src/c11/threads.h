@@ -83,6 +83,13 @@
 extern "C" {
 #endif
 
+/* Detect whether libc already provides C23 once_flag/call_once in C mode. */
+#if defined(__GLIBC__) && defined(__GLIBC_PREREQ) && __GLIBC_PREREQ(2, 39) && !defined(__cplusplus)
+#define C11_THREADS_USE_LIBC_ONCE 1
+#else
+#define C11_THREADS_USE_LIBC_ONCE 0
+#endif
+
 /*---------------------------- types ----------------------------*/
 typedef void (*tss_dtor_t)(void *);
 typedef int (*thrd_start_t)(void *);
@@ -118,8 +125,10 @@ typedef pthread_cond_t  cnd_t;
 typedef pthread_t       thrd_t;
 typedef pthread_key_t   tss_t;
 typedef pthread_mutex_t mtx_t;
+#  if !C11_THREADS_USE_LIBC_ONCE
 typedef pthread_once_t  once_flag;
-#  define ONCE_FLAG_INIT PTHREAD_ONCE_INIT
+#    define ONCE_FLAG_INIT PTHREAD_ONCE_INIT
+#  endif
 #  ifdef PTHREAD_DESTRUCTOR_ITERATIONS
 #    define TSS_DTOR_ITERATIONS PTHREAD_DESTRUCTOR_ITERATIONS
 #  else
@@ -148,7 +157,9 @@ enum
 
 /*-------------------------- functions --------------------------*/
 
+#if !C11_THREADS_USE_LIBC_ONCE
 void call_once(once_flag *, void (*)(void));
+#endif
 int cnd_broadcast(cnd_t *);
 void cnd_destroy(cnd_t *);
 int cnd_init(cnd_t *);

@@ -284,6 +284,9 @@ static bool do_winsys_init(struct radeon_drm_winsys *ws)
    case CHIP_ARUBA:
    case CHIP_KAVERI:
    case CHIP_KABINI:
+   case CHIP_LIVERPOOL:
+   case CHIP_GLADIUS:
+      /* PS4 Liverpool/Gladius are unified-memory APUs, not dGPU-style VRAM parts. */
       ws->info.has_dedicated_vram = false;
       break;
 
