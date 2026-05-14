@@ -858,11 +858,7 @@ clc_compile_to_llvm_module(LLVMContext &llvm_ctx,
    // http://www.llvm.org/bugs/show_bug.cgi?id=19735
    c->getDiagnosticOpts().ShowCarets = false;
 
-   c->createDiagnostics(
-#if LLVM_VERSION_MAJOR >= 20
-                   *llvm::vfs::getRealFileSystem(),
-#endif
-                   new clang::TextDiagnosticPrinter(diag_log_stream, c->getDiagnosticOpts()));
+   c->createDiagnostics(new clang::TextDiagnosticPrinter(diag_log_stream, c->getDiagnosticOpts()));
 
    c->setTarget(clang::TargetInfo::CreateTargetInfo(
 #if LLVM_VERSION_MAJOR >= 21
@@ -909,21 +905,16 @@ clc_compile_to_llvm_module(LLVMContext &llvm_ctx,
       return {};
    }
 
-   // GetResourcePath is a way to retrieve the actual libclang resource dir based on a given binary
-   // or library.
-   auto tmp_res_path =
-#if LLVM_VERSION_MAJOR >= 20
-      Driver::GetResourcesPath(std::string(clang_path), CLANG_RESOURCE_DIR);
-#else
-      Driver::GetResourcesPath(std::string(clang_path), CLANG_RESOURCE_DIR);
-#endif
-   auto clang_res_path = fs::path(tmp_res_path) / "include";
+   /* Use the configured clang resource dir directly; some clang releases no longer
+    * expose Driver::GetResourcesPath in this build configuration.
+    */
+   auto clang_res_path = fs::path(CLANG_RESOURCE_DIR) / "include";
 
    free(clang_path);
 
    c->getHeaderSearchOpts().UseBuiltinIncludes = true;
    c->getHeaderSearchOpts().UseStandardSystemIncludes = true;
-   c->getHeaderSearchOpts().ResourceDir = clang_res_path.string();
+   c->getHeaderSearchOpts().ResourceDir = CLANG_RESOURCE_DIR;
 
    // Add opencl-c generic search path
    c->getHeaderSearchOpts().AddPath(clang_res_path.string(),
