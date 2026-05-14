@@ -1167,7 +1167,9 @@ ac_query_gpu_info(int fd, void *dev_p, struct radeon_info *info,
     *   piglit/bin/tex-miplevel-selection 'texture()' 2DShadow -auto
     */
    info->has_tc_compatible_htile = info->gfx_level >= GFX8 && info->gfx_level < GFX12 &&
-                                   info->family != CHIP_TONGA && info->family != CHIP_ICELAND;
+                                   info->family != CHIP_TONGA && info->family != CHIP_ICELAND &&
+                                   /* PS4 Liverpool/Gladius have custom depth metadata behavior. */
+                                   info->family != CHIP_LIVERPOOL && info->family != CHIP_GLADIUS;
 
    info->has_etc_support = info->family == CHIP_STONEY || info->family == CHIP_VEGA10 ||
                            info->family == CHIP_RAVEN || info->family == CHIP_RAVEN2;
